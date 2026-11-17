@@ -5,43 +5,160 @@
 <head>
   <!-- Permite acentos e caracteres especiais -->
   <meta charset="UTF-8">
+  <!-- Faz a página se ajustar bem em telas de celular -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- Título que aparece na aba do navegador -->
   <title>Lista de Tarefas - Aula Docker</title>
+
+  <style>
+    /* Fundo azul degradê e fonte moderna em toda a página */
+    body {
+      margin: 0;                                         /* remove a margem padrão */
+      min-height: 100vh;                                 /* ocupa a altura toda da tela */
+      font-family: system-ui, sans-serif;                /* fonte padrão do sistema */
+      background: linear-gradient(135deg, #4f46e5, #06b6d4); /* degradê roxo -> ciano */
+      display: flex;                                     /* usa flexbox para centralizar */
+      justify-content: center;                           /* centraliza na horizontal */
+      padding: 40px 16px;                                /* espaço nas bordas */
+      box-sizing: border-box;                            /* padding entra na conta da largura */
+    }
+
+    /* Cartão branco no centro da tela */
+    .card {
+      background: #fff;                                  /* fundo branco */
+      width: 100%;                                       /* ocupa a largura disponível... */
+      max-width: 480px;                                  /* ...até no máximo 480px */
+      height: fit-content;                               /* altura só do tamanho do conteúdo */
+      padding: 28px;                                     /* espaço interno */
+      border-radius: 16px;                               /* cantos arredondados */
+      box-shadow: 0 10px 30px rgba(0,0,0,.2);            /* sombra suave */
+    }
+
+    /* Título do cartão */
+    h1 { margin: 0 0 20px; color: #1e293b; font-size: 24px; }
+
+    /* Linha com campo de texto + botão */
+    .form { display: flex; gap: 8px; margin-bottom: 20px; }
+
+    /* Campo de texto */
+    input[type=text] {
+      flex: 1;                                           /* ocupa o espaço que sobrar */
+      padding: 10px 12px;                                /* espaço interno */
+      border: 1px solid #cbd5e1;                         /* borda cinza clara */
+      border-radius: 8px;                                /* cantos arredondados */
+      font-size: 15px;                                   /* tamanho da letra */
+    }
+
+    /* Botões em geral */
+    button {
+      border: none;                                      /* sem borda */
+      border-radius: 8px;                                /* cantos arredondados */
+      padding: 10px 14px;                                /* espaço interno */
+      cursor: pointer;                                   /* mãozinha ao passar o mouse */
+      background: #4f46e5;                               /* roxo */
+      color: #fff;                                       /* texto branco */
+      font-size: 14px;                                   /* tamanho da letra */
+    }
+    button:hover { opacity: .85; }                       /* leve transparência ao passar o mouse */
+    button.apagar { background: #ef4444; }               /* botão apagar em vermelho */
+    button.editar { background: #f59e0b; }               /* botão editar em laranja */
+
+    /* Lista sem marcadores */
+    ul { list-style: none; margin: 0; padding: 0; }
+
+    /* Cada tarefa da lista */
+    li {
+      display: flex;                                     /* itens lado a lado */
+      align-items: center;                               /* alinha verticalmente */
+      gap: 8px;                                          /* espaço entre os itens */
+      padding: 10px 0;                                   /* espaço em cima e embaixo */
+      border-bottom: 1px solid #e2e8f0;                  /* linha separadora */
+    }
+
+    /* Texto da tarefa ocupa o espaço que sobrar */
+    li span { flex: 1; color: #334155; }
+
+    /* Tarefa concluída fica riscada e cinza */
+    li.feita span { text-decoration: line-through; color: #94a3b8; }
+  </style>
 </head>
 <body>
-  <!-- Título principal da página -->
-  <h1>Lista de Tarefas</h1>
+  <!-- Cartão central -->
+  <div class="card">
+    <!-- Título principal da página -->
+    <h1>📝 Lista de Tarefas</h1>
 
-  <!-- Campo de texto onde o aluno digita a nova tarefa -->
-  <input id="titulo" placeholder="Nova tarefa">
-  <!-- Botão que chama a função adicionar() ao ser clicado -->
-  <button onclick="adicionar()">Adicionar</button>
+    <!-- Formulário para criar tarefa (CREATE) -->
+    <div class="form">
+      <!-- Campo de texto; Enter também adiciona (ver JavaScript) -->
+      <input type="text" id="titulo" placeholder="O que você precisa fazer?">
+      <!-- Botão que chama a função adicionar() -->
+      <button onclick="adicionar()">Adicionar</button>
+    </div>
 
-  <!-- Lista vazia; o JavaScript preenche com as tarefas do banco -->
-  <ul id="lista"></ul>
+    <!-- Lista vazia; o JavaScript preenche com as tarefas do banco (READ) -->
+    <ul id="lista"></ul>
+  </div>
 
   <script>
     // Endereço do backend (porta 3000 publicada no seu computador pelo docker-compose)
     const API = 'http://localhost:3000/api/tarefas';
 
-    // Busca as tarefas no backend e mostra na tela
+    // READ: busca as tarefas no backend e mostra na tela
     async function carregar() {
       // Faz GET na API
       const resposta = await fetch(API);
       // Converte a resposta de JSON para um array de objetos
       const tarefas = await resposta.json();
-      // Monta um <li> para cada tarefa e coloca dentro da lista
-      document.getElementById('lista').innerHTML =
-        tarefas.map(t => `<li>${t.titulo}</li>`).join('');
+      // Pega o <ul> da página
+      const lista = document.getElementById('lista');
+      // Limpa a lista antes de redesenhar
+      lista.innerHTML = '';
+
+      // Para cada tarefa, cria um <li>
+      tarefas.forEach(t => {
+        // Cria o item da lista
+        const li = document.createElement('li');
+        // Se estiver concluída, aplica a classe "feita" (risca o texto)
+        if (t.concluida) li.className = 'feita';
+
+        // Caixinha para marcar/desmarcar como concluída
+        const check = document.createElement('input');
+        check.type = 'checkbox';                         // tipo checkbox
+        check.checked = t.concluida;                     // marcada se já concluída
+        check.onchange = () => atualizar(t.id, { concluida: check.checked }); // UPDATE do status
+
+        // Texto da tarefa (textContent evita injeção de HTML)
+        const texto = document.createElement('span');
+        texto.textContent = t.titulo;
+
+        // Botão editar
+        const editar = document.createElement('button');
+        editar.textContent = 'Editar';
+        editar.className = 'editar';
+        editar.onclick = () => editarTitulo(t);          // chama a edição
+
+        // Botão apagar
+        const apagar = document.createElement('button');
+        apagar.textContent = 'Apagar';
+        apagar.className = 'apagar';
+        apagar.onclick = () => remover(t.id);            // chama a remoção
+
+        // Coloca tudo dentro do <li> e o <li> dentro da lista
+        li.append(check, texto, editar, apagar);
+        lista.appendChild(li);
+      });
     }
 
-    // Envia uma nova tarefa para o backend
+    // CREATE: envia uma nova tarefa para o backend
     async function adicionar() {
       // Lê o texto digitado
       const campo = document.getElementById('titulo');
+      // Não envia se estiver vazio
+      if (!campo.value.trim()) return;
       // Faz POST na API enviando o título em JSON
       await fetch(API, {
-        method: 'POST',                                   // tipo da requisição
+        method: 'POST',                                  // tipo da requisição
         headers: { 'Content-Type': 'application/json' }, // avisa que o corpo é JSON
         body: JSON.stringify({ titulo: campo.value }),   // corpo: {"titulo": "..."}
       });
@@ -50,6 +167,41 @@
       // Recarrega a lista para mostrar a nova tarefa
       carregar();
     }
+
+    // UPDATE: envia ao backend os campos que mudaram (titulo e/ou concluida)
+    async function atualizar(id, dados) {
+      // Faz PUT em /api/tarefas/<id>
+      await fetch(`${API}/${id}`, {
+        method: 'PUT',                                   // PUT = atualizar
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dados),                     // ex: {"concluida": true}
+      });
+      // Recarrega a lista
+      carregar();
+    }
+
+    // Pede o novo título ao usuário e chama atualizar()
+    function editarTitulo(tarefa) {
+      // prompt abre uma caixinha de texto já preenchida com o título atual
+      const novo = prompt('Editar tarefa:', tarefa.titulo);
+      // Só atualiza se o usuário digitou algo (cancelar retorna null)
+      if (novo && novo.trim()) atualizar(tarefa.id, { titulo: novo });
+    }
+
+    // DELETE: apaga uma tarefa
+    async function remover(id) {
+      // Confirma antes de apagar
+      if (!confirm('Apagar esta tarefa?')) return;
+      // Faz DELETE em /api/tarefas/<id>
+      await fetch(`${API}/${id}`, { method: 'DELETE' });
+      // Recarrega a lista
+      carregar();
+    }
+
+    // Permite adicionar apertando Enter no campo de texto
+    document.getElementById('titulo').addEventListener('keydown', e => {
+      if (e.key === 'Enter') adicionar();
+    });
 
     // Carrega as tarefas assim que a página abre
     carregar();
