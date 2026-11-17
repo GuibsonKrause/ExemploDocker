@@ -1,0 +1,4 @@
+# Não copia node_modules local para a imagem (o npm install do Dockerfile já cria)
+node_modules
+# Logs não são necessários na imagem
+*.log

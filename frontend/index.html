@@ -1,0 +1,58 @@
+<!-- Declara que o documento é HTML5 -->
+<!DOCTYPE html>
+<!-- Início da página, idioma português -->
+<html lang="pt-BR">
+<head>
+  <!-- Permite acentos e caracteres especiais -->
+  <meta charset="UTF-8">
+  <!-- Título que aparece na aba do navegador -->
+  <title>Lista de Tarefas - Aula Docker</title>
+</head>
+<body>
+  <!-- Título principal da página -->
+  <h1>Lista de Tarefas</h1>
+
+  <!-- Campo de texto onde o aluno digita a nova tarefa -->
+  <input id="titulo" placeholder="Nova tarefa">
+  <!-- Botão que chama a função adicionar() ao ser clicado -->
+  <button onclick="adicionar()">Adicionar</button>
+
+  <!-- Lista vazia; o JavaScript preenche com as tarefas do banco -->
+  <ul id="lista"></ul>
+
+  <script>
+    // Endereço do backend (porta 3000 publicada no seu computador pelo docker-compose)
+    const API = 'http://localhost:3000/api/tarefas';
+
+    // Busca as tarefas no backend e mostra na tela
+    async function carregar() {
+      // Faz GET na API
+      const resposta = await fetch(API);
+      // Converte a resposta de JSON para um array de objetos
+      const tarefas = await resposta.json();
+      // Monta um <li> para cada tarefa e coloca dentro da lista
+      document.getElementById('lista').innerHTML =
+        tarefas.map(t => `<li>${t.titulo}</li>`).join('');
+    }
+
+    // Envia uma nova tarefa para o backend
+    async function adicionar() {
+      // Lê o texto digitado
+      const campo = document.getElementById('titulo');
+      // Faz POST na API enviando o título em JSON
+      await fetch(API, {
+        method: 'POST',                                   // tipo da requisição
+        headers: { 'Content-Type': 'application/json' }, // avisa que o corpo é JSON
+        body: JSON.stringify({ titulo: campo.value }),   // corpo: {"titulo": "..."}
+      });
+      // Limpa o campo de texto
+      campo.value = '';
+      // Recarrega a lista para mostrar a nova tarefa
+      carregar();
+    }
+
+    // Carrega as tarefas assim que a página abre
+    carregar();
+  </script>
+</body>
+</html>

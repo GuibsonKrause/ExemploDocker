@@ -1,0 +1,14 @@
+# Dependências do Node (geradas pelo npm install)
+node_modules/
+
+# Variáveis de ambiente com senhas (se usar .env no futuro)
+.env
+
+# Logs
+*.log
+
+# Arquivos do sistema/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

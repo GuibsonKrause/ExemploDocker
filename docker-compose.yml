@@ -1,0 +1,44 @@
+# Define os 3 serviços (containers) que formam a aplicação
+services:
+
+  # ---------- BANCO DE DADOS ----------
+  banco:                                  # nome do serviço (o backend usa este nome como host)
+    image: postgres:16-alpine             # usa imagem pronta do Postgres, sem Dockerfile
+    environment:                          # variáveis de ambiente que configuram o Postgres
+      POSTGRES_USER: aluno                # usuário criado no banco
+      POSTGRES_PASSWORD: senha123         # senha do usuário (só para aula!)
+      POSTGRES_DB: escola                 # banco criado automaticamente
+    volumes:                              # liga pastas/volumes do PC ao container
+      - dados:/var/lib/postgresql/data    # volume nomeado: os dados sobrevivem se o container for apagado
+      - ./banco/init.sql:/docker-entrypoint-initdb.d/init.sql  # script que cria a tabela na 1ª vez
+    healthcheck:                          # teste que diz se o banco está pronto
+      test: ["CMD-SHELL", "pg_isready -U aluno -d escola"]  # comando de verificação
+      interval: 3s                        # testa a cada 3 segundos
+      timeout: 3s                         # desiste do teste após 3 segundos
+      retries: 10                         # tenta até 10 vezes antes de dar erro
+
+  # ---------- BACKEND (API) ----------
+  backend:                                # nome do serviço da API
+    build: ./backend                      # constrói a imagem usando backend/Dockerfile
+    ports:
+      - "3000:3000"                       # porta-do-PC:porta-do-container (acesse em localhost:3000)
+    environment:                          # variáveis lidas pelo server.js
+      DB_HOST: banco                      # host = nome do serviço do banco
+      DB_USER: aluno                      # mesmo usuário definido no banco
+      DB_PASSWORD: senha123               # mesma senha definida no banco
+      DB_NAME: escola                     # mesmo nome de banco
+    depends_on:                           # ordem de inicialização
+      banco:
+        condition: service_healthy        # só inicia o backend quando o banco estiver pronto
+
+  # ---------- FRONTEND ----------
+  frontend:                               # nome do serviço da página web
+    build: ./frontend                     # constrói a imagem usando frontend/Dockerfile
+    ports:
+      - "8080:80"                         # acesse em localhost:8080 (80 é a porta do Nginx)
+    depends_on:
+      - backend                           # inicia depois do backend
+
+# Declara o volume nomeado usado pelo banco
+volumes:
+  dados:
